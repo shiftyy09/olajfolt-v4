@@ -1,32 +1,44 @@
-name: Build iOS IPA (Olajfolt App)
+name: Build iOS for AltStore (Olajfolt)
 
 on:
-  workflow_dispatch: # kézzel indítható build
   push:
-    branches:
-      - main  # automatikus build push után
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: macos-latest
+  build_ios:
+    runs-on: macos-15
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Use Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0' # vagy a verziód, ha más
+          flutter-version: '3.35.1'
 
-      - name: Install dependencies
+      - name: Check Flutter
+        run: flutter --version
+
+      - name: Get dependencies
         run: flutter pub get
 
-      - name: Build iOS release (no codesign)
-        run: flutter build ipa --release --no-codesign
-
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
+        
+      - name: Create Payload folder and IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r Olajfolt.ipa Payload/
+          
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: olajfolt-ios
-          path: build/ios/ipa/*.ipa
+          name: Olajfolt-IPA
+          path: Olajfolt.ipa
