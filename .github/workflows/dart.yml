@@ -1,0 +1,32 @@
+name: Build iOS IPA (Olajfolt App)
+
+on:
+  workflow_dispatch: # kézzel indítható build
+  push:
+    branches:
+      - main  # automatikus build push után
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0' # vagy a verziód, ha más
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS release (no codesign)
+        run: flutter build ipa --release --no-codesign
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: olajfolt-ios
+          path: build/ios/ipa/*.ipa
