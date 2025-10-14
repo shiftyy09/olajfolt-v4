@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../alap/adatbazis/adatbazis_kezelo.dart';
 import '../../modellek/jarmu.dart';
 import 'package:car_maintenance_app/modellek/karbantartas.dart';
@@ -17,22 +18,411 @@ class JarmuHozzaadasa extends StatefulWidget {
 
 class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _makeController;
+
+  String? _selectedMake;
   late TextEditingController _modelController;
   late TextEditingController _yearController;
   late TextEditingController _licensePlateController;
   late TextEditingController _vinController;
   late TextEditingController _mileageController;
 
+  final List<String> _supportedCarMakes = [
+    '9ff',
+    'Abadal',
+    'Abarth',
+    'Abbott-Detroit',
+    'ABT',
+    'AC',
+    'Acura',
+    'Aiways',
+    'Aixam',
+    'Alfa Romeo',
+    'Alpina',
+    'Alpine',
+    'Alta',
+    'Alvis',
+    'AMC',
+    'Apollo',
+    'Arash',
+    'Arcfox',
+    'Ariel',
+    'ARO',
+    'Arrinera',
+    'Arrival',
+    'Artega',
+    'Ascari',
+    'Askam',
+    'Aspark',
+    'Aston Martin',
+    'Atalanta',
+    'Auburn',
+    'Audi',
+    'Audi Sport',
+    'Austin',
+    'Autobacs',
+    'Autobianchi',
+    'Axon',
+    'BAC',
+    'BAIC Motor',
+    'Baojun',
+    'BeiBen',
+    'Bentley',
+    'Berkeley',
+    'Berliet',
+    'Bertone',
+    'Bestune',
+    'BharatBenz',
+    'Bitter',
+    'Bizzarrini',
+    'BMW',
+    'BMW M',
+    'Borgward',
+    'Bowler',
+    'Brabus',
+    'Brammo',
+    'Brilliance',
+    'Bristol',
+    'Brooke',
+    'Bufori',
+    'Bugatti',
+    'Buick',
+    'BYD',
+    'Byton',
+    'Cadillac',
+    'CAMC',
+    'Canoo',
+    'Caparo',
+    'Carlsson',
+    'Caterham',
+    'Changan',
+    'Changfeng',
+    'Chery',
+    'Chevrolet',
+    'Chevrolet Corvette',
+    'Chrysler',
+    'Cisitalia',
+    'Citroën',
+    'Cizeta',
+    'Cole',
+    'Corre La Licorne',
+    'Cupra',
+    'Dacia',
+    'Daewoo',
+    'DAF',
+    'Daihatsu',
+    'Daimler',
+    'Dartz',
+    'Datsun',
+    'David Brown',
+    'Dayun',
+    'De Tomaso',
+    'Delage',
+    'DeSoto',
+    'Detroit Electric',
+    'Devel Sixteen',
+    'Diatto',
+    'DINA',
+    'DKW',
+    'DMC',
+    'Dodge',
+    'Dodge Viper',
+    'Dongfeng',
+    'Donkervoort',
+    'Drako',
+    'DS',
+    'Duesenberg',
+    'Eagle',
+    'EDAG',
+    'Edsel',
+    'Eicher',
+    'Elemental',
+    'Elfin',
+    'Elva',
+    'Englon',
+    'ERF',
+    'Eterniti',
+    'Exeed',
+    'Facel Vega',
+    'Faraday Future',
+    'FAW',
+    'FAW Jiefang',
+    'Ferrari',
+    'Fiat',
+    'Fioravanti',
+    'Fisker',
+    'Foden',
+    'Force Motors',
+    'Ford',
+    'Ford Mustang',
+    'Foton',
+    'FPV',
+    'Franklin',
+    'Freightliner',
+    'FSO',
+    'GAC Group',
+    'Gardner Douglas',
+    'GAZ',
+    'Geely',
+    'General Motors',
+    'Genesis',
+    'Geo',
+    'Geometry',
+    'Gilbern',
+    'Gillet',
+    'Ginetta',
+    'GMC',
+    'Golden Dragon',
+    'Gonow',
+    'Great Wall',
+    'Grinnall',
+    'Gumpert',
+    'Hafei',
+    'Haima',
+    'Haval',
+    'Hawtai',
+    'Hennessey',
+    'Higer',
+    'Hillman',
+    'Hindustan Motors',
+    'Hino',
+    'HiPhi',
+    'Hispano-Suiza',
+    'Holden',
+    'Hommell',
+    'Honda',
+    'Hongqi',
+    'Hongyan',
+    'Horch',
+    'HSV',
+    'Hudson',
+    'Hummer',
+    'Hupmobile',
+    'Hyundai',
+    'IC Bus',
+    'IH',
+    'IKCO',
+    'Infiniti',
+    'Innocenti',
+    'Intermeccanica',
+    'International',
+    'Irizar',
+    'Isdera',
+    'Iso',
+    'Isuzu',
+    'Iveco',
+    'JAC',
+    'Jaguar',
+    'Jawa',
+    'JBA Motors',
+    'Jeep',
+    'Jensen',
+    'Jetour',
+    'Jetta',
+    'JMC',
+    'Kaiser',
+    'Kamaz',
+    'Karlmann King',
+    'Karma',
+    'Keating',
+    'Kenworth',
+    'Kia',
+    'King Long',
+    'Koenigsegg',
+    'KTM',
+    'Lada',
+    'Lagonda',
+    'Lamborghini',
+    'Lancia',
+    'Land Rover',
+    'Landwind',
+    'Laraki',
+    'Leapmotor',
+    'LEVC',
+    'Lexus',
+    'Leyland',
+    'Li Auto',
+    'Lifan',
+    'Ligier',
+    'Lincoln',
+    'Lister',
+    'Lloyd',
+    'Lobini',
+    'Lordstown',
+    'Lotus',
+    'Lucid',
+    'Luxgen',
+    'Lynk & Co',
+    'Mack',
+    'Mahindra',
+    'MAN',
+    'Mansory',
+    'Marcos',
+    'Marlin',
+    'Maserati',
+    'Mastretta',
+    'Maxus',
+    'Maybach',
+    'MAZ',
+    'Mazda',
+    'Mazzanti',
+    'McLaren',
+    'Melkus',
+    'Mercedes-AMG',
+    'Mercedes-Benz',
+    'Mercury',
+    'Merkur',
+    'MEV',
+    'MG',
+    'Microcar',
+    'Mini',
+    'Mitsubishi',
+    'Mitsuoka',
+    'MK',
+    'Morgan',
+    'Morris',
+    'Mosler',
+    'Navistar',
+    'NEVS',
+    'Nikola',
+    'NIO',
+    'Nissan',
+    'Nissan GT-R',
+    'Nissan Nismo',
+    'Noble',
+    'Oldsmobile',
+    'Oltcit',
+    'Omoda',
+    'Opel',
+    'OSCA',
+    'Paccar',
+    'Packard',
+    'Pagani',
+    'Panhard',
+    'Panoz',
+    'Pegaso',
+    'Perodua',
+    'Peterbilt',
+    'Peugeot',
+    'PGO',
+    'Pierce-Arrow',
+    'Pininfarina',
+    'Plymouth',
+    'Polestar',
+    'Pontiac',
+    'Porsche',
+    'Praga',
+    'Premier',
+    'Prodrive',
+    'Proton',
+    'Qoros',
+    'Radical',
+    'RAM',
+    'Rambler',
+    'Ranz',
+    'Renault',
+    'Renault Samsung',
+    'Rezvani',
+    'Riley',
+    'Rimac',
+    'Rinspeed',
+    'Rivian',
+    'Roewe',
+    'Rolls-Royce',
+    'Ronart',
+    'Rossion',
+    'Rover',
+    'RUF',
+    'Saab',
+    'SAIC Motor',
+    'Saipa',
+    'Saleen',
+    'Saturn',
+    'Scania',
+    'Scion',
+    'SEAT',
+    'Setra',
+    'SEV',
+    'Shacman',
+    'Simca',
+    'Singer',
+    'Singulato',
+    'Sinotruk',
+    'Sisu',
+    'Škoda',
+    'Smart',
+    'Soueast',
+    'Spania GTA',
+    'Spirra',
+    'Spyker',
+    'SsangYong',
+    'SSC',
+    'Sterling',
+    'Studebaker',
+    'Stutz',
+    'Subaru',
+    'Suffolk',
+    'Suzuki',
+    'Talbot',
+    'Tata',
+    'Tatra',
+    'Tauro',
+    'TechArt',
+    'Tesla',
+    'Toyota',
+    'Toyota Alphard',
+    'Toyota Century',
+    'Toyota Crown',
+    'Tramontana',
+    'Trion',
+    'Triumph',
+    'Troller',
+    'Tucker',
+    'TVR',
+    'UAZ',
+    'UD',
+    'Ultima',
+    'Vandenbrink',
+    'Vauxhall',
+    'Vector',
+    'Vencer',
+    'Venturi',
+    'Venucia',
+    'VinFast',
+    'VLF',
+    'Volkswagen',
+    'Volvo',
+    'W Motors',
+    'Wanderer',
+    'Wartburg',
+    'Weltmeister',
+    'Western Star',
+    'Westfield',
+    'WEY',
+    'Wiesmann',
+    'Willys-Overland',
+    'Workhorse',
+    'Wuling',
+    'XPeng',
+    'Yulon',
+    'Yutong',
+    'Zarooq Motors',
+    'Zastava',
+    'ZAZ',
+    'Zeekr',
+    'Zenos',
+    'Zenvo',
+    'Zhongtong',
+    'Zinoro',
+    'Zotye'
+  ];
+
   String _selectedVezerlesTipus = 'Szíj';
   final List<String> _vezerlesOptions = ['Szíj', 'Lánc'];
   bool _remindersEnabled = false;
-
   final Map<String, TextEditingController> _kmBasedServiceControllers = {};
   final Map<String, DateTime?> _dateBasedServiceDates = {};
   final Map<String, bool> _serviceEnabledStates = {};
   final Map<String, String?> _serviceErrors = {};
-
   final List<String> _dateBasedServiceTypes = [
     'Műszaki vizsga',
     'Akkumulátor csere'
@@ -46,10 +436,9 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     'Fékbetét csere (első)',
     'Fékbetét csere (hátsó)',
     'Fékfolyadék csere',
-    'Hűtőfolyadék csere',
+    'Hűtőfolyadék csere'
   ];
   late List<String> _allServiceTypes;
-
   final Map<String, Color> _iconColors = {
     'Márka': Colors.cyan,
     'Modell': Colors.lightBlue,
@@ -57,24 +446,29 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     'Vezérlés': Colors.purple,
     'Kilométeróra': Colors.amber,
     'Rendszám': Colors.green,
-    'Alvázszám': Colors.blueGrey,
+    'Alvázszám': Colors.blueGrey
   };
-
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _makeController = TextEditingController(text: widget.vehicleToEdit?.make);
+    _selectedMake = widget.vehicleToEdit?.make;
     _modelController = TextEditingController(text: widget.vehicleToEdit?.model);
     _yearController =
         TextEditingController(text: widget.vehicleToEdit?.year?.toString());
     _licensePlateController =
         TextEditingController(text: widget.vehicleToEdit?.licensePlate);
     _vinController = TextEditingController(text: widget.vehicleToEdit?.vin);
-    _mileageController = TextEditingController(
-        text: widget.vehicleToEdit?.mileage?.toString());
+    _mileageController =
+        TextEditingController(text: widget.vehicleToEdit?.mileage?.toString());
     _selectedVezerlesTipus = widget.vehicleToEdit?.vezerlesTipusa ?? 'Szíj';
+
+    if (_selectedMake != null && !_supportedCarMakes.contains(_selectedMake)) {
+      if (_selectedMake!.isNotEmpty) {
+        _supportedCarMakes.insert(0, _selectedMake!);
+      }
+    }
 
     _mileageController.addListener(() {
       if (_remindersEnabled) {
@@ -86,7 +480,6 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     _initializeServiceControllers();
 
     if (widget.vehicleToEdit != null) {
-      // JAVÍTVA: Szerkesztéskor azonnal kinyitjuk a karbantartási listát
       _remindersEnabled = true;
       _loadMaintenanceData(widget.vehicleToEdit!);
     } else {
@@ -125,13 +518,11 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     if (mounted) {
       setState(() {
         _isLoading = false;
-        // Betöltés után azonnal validálunk, hogy az esetleges hibák eltűnjenek
         _validateAllServices();
       });
     }
   }
 
-  // JAVÍTVA: A validáció mostantól automatikusan kitölti az üres mezőket
   void _validateService(String serviceType, String? value) {
     if (!(_serviceEnabledStates[serviceType] ?? false)) {
       _serviceErrors[serviceType] = null;
@@ -144,13 +535,9 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
       return;
     }
 
-    // Ha üres a mező, de be van pipálva, automatikusan kitöltjük az aktuális km-rel
     if (value == null || value.isEmpty) {
-      // A setState a builden kívül itt nem biztonságos, de a controller értékét beállíthatjuk.
-      // A következő build ciklus már a helyes értékkel fogja felépíteni.
       _kmBasedServiceControllers[serviceType]?.text = currentMileage.toString();
-      _serviceErrors[serviceType] = null; // Töröljük a hibát
-      // Hívunk egy setState-et, hogy a UI frissüljön az új értékkel
+      _serviceErrors[serviceType] = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() {});
       });
@@ -179,31 +566,48 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     }
   }
 
+  @override
+  void dispose() {
+    _modelController.dispose();
+    _yearController.dispose();
+    _licensePlateController.dispose();
+    _vinController.dispose();
+    _mileageController.dispose();
+    _kmBasedServiceControllers.forEach((_, controller) => controller.dispose());
+    super.dispose();
+  }
+
   Future<void> _saveOrUpdateVehicle() async {
-    if (!_formKey.currentState!.validate()) {
+    if (_selectedMake == null || _selectedMake!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Kérlek, töltsd ki a kötelező alap adatokat!'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
+            content: Text('Válassz márkát!'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating),
       );
       return;
     }
 
-    // Mentés előtt még egyszer validálunk mindent
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Kérlek, töltsd ki a kötelező alap adatokat!'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
     if (_remindersEnabled) {
       _validateAllServices();
-      // Rövid késleltetés, hogy a validáció által beállított controller értékek biztosan "átmenjenek"
       await Future.delayed(const Duration(milliseconds: 50));
       if (_serviceErrors.values.any((e) => e != null)) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Javítsd a hibás emlékeztető adatokat!'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
+              content: Text('Javítsd a hibás emlékeztető adatokat!'),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating),
         );
         return;
       }
@@ -211,7 +615,7 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
 
     final vehicle = Jarmu(
       id: widget.vehicleToEdit?.id,
-      make: _makeController.text,
+      make: _selectedMake!,
       model: _modelController.text,
       year: int.parse(_yearController.text),
       licensePlate: _licensePlateController.text.toUpperCase(),
@@ -237,86 +641,63 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
           if (_serviceEnabledStates[type] == true) {
             if (_dateBasedServiceTypes.contains(type) &&
                 _dateBasedServiceDates[type] != null) {
-              await db.insert('maintenance', Karbantartas(
-                vehicleId: vehicleId,
-                serviceType: type,
-                date: _dateBasedServiceDates[type]!.toIso8601String(),
-                mileage: 0,
-              ).toMap());
+              await db.insert(
+                  'maintenance',
+                  Karbantartas(
+                      vehicleId: vehicleId,
+                      serviceType: type,
+                      date: _dateBasedServiceDates[type]!.toIso8601String(),
+                      mileage: 0)
+                      .toMap());
             } else if (_kmBasedServiceTypes.contains(type)) {
               final controller = _kmBasedServiceControllers[type];
-              // Ha a controller üres, a jármű aktuális km-ét mentjük
               final mileageToSave = int.tryParse(controller?.text ?? '') ??
                   vehicle.mileage;
-              await db.insert('maintenance', Karbantartas(
-                vehicleId: vehicleId,
-                serviceType: type,
-                mileage: mileageToSave,
-                date: DateTime.now().toIso8601String(),
-              ).toMap());
+              await db.insert(
+                  'maintenance',
+                  Karbantartas(
+                      vehicleId: vehicleId,
+                      serviceType: type,
+                      mileage: mileageToSave,
+                      date: DateTime.now().toIso8601String())
+                      .toMap());
             }
           }
         }
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Jármű sikeresen mentve!'),
             backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+            behavior: SnackBarBehavior.floating));
         Navigator.pop(context, true);
       }
     } on DatabaseException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e.isUniqueConstraintError()
                 ? 'Hiba: Ez a rendszám már foglalt!'
                 : 'Adatbázis hiba!'),
             backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+            behavior: SnackBarBehavior.floating));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Ismeretlen hiba történt: $e'),
             backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+            behavior: SnackBarBehavior.floating));
       }
     }
   }
 
   @override
-  void dispose() {
-    _makeController.dispose();
-    _modelController.dispose();
-    _yearController.dispose();
-    _licensePlateController.dispose();
-    _vinController.dispose();
-    _mileageController.dispose();
-    _kmBasedServiceControllers.forEach((_, controller) => controller.dispose());
-    super.dispose();
-  }
-
-  // --- Az UI Építő Widgetek Innentől Változatlanok ---
-  // A bemásolt kódodban ez a rész már helyes volt, így nem módosítom.
-  // A teljesség kedvéért itt van az egész.
-
-  @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF121212),
-        body: Center(child: CircularProgressIndicator(color: Colors.orange)),
-      );
+          backgroundColor: Color(0xFF121212),
+          body: Center(child: CircularProgressIndicator(color: Colors.orange)));
     }
 
     return Scaffold(
@@ -334,65 +715,74 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionCard(
+                      title: 'Alapinformációk',
                       children: [
-                        _buildSectionCard(
-                            title: 'Alapinformációk',
-                            children: [
-                              Row(children: [
-                                Expanded(
-                                    child: _buildTextField(_makeController,
-                                        'Márka',
-                                        icon: Icons.directions_car)),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                    child: _buildTextField(
-                                        _modelController, 'Modell',
-                                        icon: Icons.star_outline)),
-                              ]),
-                              const SizedBox(height: 16),
-                              Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                        child: _buildTextField(
-                                            _yearController, 'Évjárat',
-                                            icon: Icons.calendar_today,
-                                            keyboardType: TextInputType.number,
-                                            maxLength: 4)),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                        child: _buildDropdown(
-                                            label: 'Vezérlés',
-                                            icon: Icons.settings)),
-                                  ]),
-                              const SizedBox(height: 16),
-                              _buildTextField(
-                                  _mileageController, 'Kilométeróra',
-                                  icon: Icons.speed,
-                                  keyboardType: TextInputType.number),
-                              const SizedBox(height: 16),
-                              _buildTextField(
-                                  _licensePlateController, 'Rendszám',
-                                  icon: Icons.pin),
-                              const SizedBox(height: 16),
-                              _buildTextField(_vinController, 'Alvázszám',
-                                  optional: true, icon: Icons.qr_code),
-                            ]),
-                        const SizedBox(height: 24),
-                        _buildSectionCard(title: 'Karbantartás', children: [
-                          _buildReminderToggle(),
-                          AnimatedSize(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              child: _remindersEnabled
-                                  ? _buildReminderContent()
-                                  : const SizedBox.shrink()),
-                        ]),
-                        const SizedBox(height: 120),
-                      ])),
+                        // === JAVÍTOTT, SZÉP ELRENDEZÉS ===
+                        _buildMakeDropdown(),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                                child: _buildTextField(
+                                    controller: _modelController,
+                                    label: 'Modell',
+                                    icon: Icons.star_outline)
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                                child: _buildTextField(
+                                    controller: _yearController,
+                                    label: 'Évjárat',
+                                    icon: Icons.calendar_today,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 4)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDropdown(label: 'Vezérlés', icon: Icons.settings),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                            controller: _mileageController,
+                            label: 'Kilométeróra',
+                            icon: Icons.speed,
+                            keyboardType: TextInputType.number),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                            controller: _licensePlateController,
+                            label: 'Rendszám',
+                            icon: Icons.pin),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                            controller: _vinController,
+                            label: 'Alvázszám',
+                            optional: true,
+                            icon: Icons.qr_code),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionCard(
+                      title: 'Karbantartás',
+                      children: [
+                        _buildReminderToggle(),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: _remindersEnabled
+                              ? _buildReminderContent()
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 120),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -417,97 +807,149 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     );
   }
 
+  Widget _buildMakeDropdown() {
+    return _buildTextField(
+      label: 'Márka',
+      icon: Icons.directions_car,
+      child: DropdownSearch<String>(
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            decoration: InputDecoration(
+              hintText: "Keresés...",
+              hintStyle: TextStyle(color: Colors.grey[600]),
+              enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey[700]!)),
+              focusedBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.orange)),
+            ),
+          ),
+          menuProps: MenuProps(
+            backgroundColor: const Color(0xFF2a2a2a),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          itemBuilder: (context, item, isSelected) {
+            return Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 12),
+              child: Text(item,
+                  style: TextStyle(
+                      color: isSelected ? Colors.orange : Colors.white,
+                      fontSize: 16)),
+            );
+          },
+        ),
+        dropdownDecoratorProps: const DropDownDecoratorProps(
+          baseStyle: TextStyle(color: Colors.white, fontSize: 16),
+          dropdownSearchDecoration: InputDecoration(
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.all(0),
+          ),
+        ),
+        items: _supportedCarMakes,
+        selectedItem: _selectedMake,
+        onChanged: (String? newValue) {
+          setState(() {
+            _selectedMake = newValue;
+          });
+        },
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Kötelező mező';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
   void _showAddCustomServiceDialog() {
     final TextEditingController customServiceController =
     TextEditingController();
     showDialog(
-      context: context,
-      builder: (context) =>
-          AlertDialog(
-            backgroundColor: const Color(0xFF2a2a2a),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15)),
-            title: const Text('Egyedi szerviz hozzáadása',
-                style: TextStyle(color: Colors.white)),
-            content: TextField(
-              controller: customServiceController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Szerviz neve (pl. DPF tisztítás)',
-                labelStyle: const TextStyle(color: Colors.white70),
-                focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.orange)),
-              ),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Mégse',
-                    style: TextStyle(color: Colors.white70)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (customServiceController.text.isNotEmpty) {
-                    setState(() {
-                      final newService = customServiceController.text;
-                      if (!_allServiceTypes.contains(newService)) {
-                        _allServiceTypes.add(newService);
-                        _kmBasedServiceTypes.add(newService);
-                        _kmBasedServiceControllers[newService] =
-                            TextEditingController();
-                        _serviceEnabledStates[newService] = true;
-                      }
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                child: const Text('Hozzáadás',
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-    );
+        context: context,
+        builder: (context) =>
+            AlertDialog(
+                backgroundColor: const Color(0xFF2a2a2a),
+                shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                title: const Text('Egyedi szerviz hozzáadása',
+                    style: TextStyle(color: Colors.white)),
+                content: TextField(
+                    controller: customServiceController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                        labelText: 'Szerviz neve (pl. DPF tisztítás)',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.orange))),
+                    autofocus: true),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Mégse',
+                          style: TextStyle(color: Colors.white70))),
+                  ElevatedButton(
+                      onPressed: () {
+                        if (customServiceController.text.isNotEmpty) {
+                          setState(() {
+                            final newService = customServiceController.text;
+                            if (!_allServiceTypes.contains(newService)) {
+                              _allServiceTypes.add(newService);
+                              _kmBasedServiceTypes.add(newService);
+                              _kmBasedServiceControllers[newService] =
+                                  TextEditingController();
+                              _serviceEnabledStates[newService] = true;
+                            }
+                          });
+                          Navigator.pop(context);
+                        }
+                      },
+                      style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                      child: const Text('Hozzáadás',
+                          style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold)))
+                ]));
   }
 
   Widget _buildReminderToggle() {
     return GestureDetector(
-      onTap: () =>
-          setState(() {
-            _remindersEnabled = !_remindersEnabled;
-            if (_remindersEnabled) {
-              _validateAllServices();
-            }
-          }),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(12)),
-        child:
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Flexible(
-              child: Text("Karbantartási emlékeztetők",
-                  style: TextStyle(color: Colors.white, fontSize: 16))),
-          Switch(
-              value: _remindersEnabled,
-              onChanged: (bool value) =>
-                  setState(() {
-                    _remindersEnabled = value;
-                    if (_remindersEnabled) {
-                      _validateAllServices();
-                    }
-                  }),
-              activeColor: Colors.orange,
-              activeTrackColor: Colors.orange.withOpacity(0.5),
-              inactiveThumbColor: Colors.grey,
-              inactiveTrackColor: Colors.grey.withOpacity(0.4))
-        ]),
-      ),
-    );
+        onTap: () =>
+            setState(() {
+              _remindersEnabled = !_remindersEnabled;
+              if (_remindersEnabled) {
+                _validateAllServices();
+              }
+            }),
+        child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12)),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Flexible(
+                      child: Text("Karbantartási emlékeztetők",
+                          style:
+                          TextStyle(color: Colors.white, fontSize: 16))),
+                  Switch(
+                      value: _remindersEnabled,
+                      onChanged: (bool value) =>
+                          setState(() {
+                            _remindersEnabled = value;
+                            if (_remindersEnabled) {
+                              _validateAllServices();
+                            }
+                          }),
+                      activeColor: Colors.orange,
+                      activeTrackColor: Colors.orange.withOpacity(0.5),
+                      inactiveThumbColor: Colors.grey,
+                      inactiveTrackColor: Colors.grey.withOpacity(0.4))
+                ])));
   }
 
   Widget _buildReminderContent() {
@@ -517,9 +959,7 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
           ..._dateBasedServiceTypes.map((type) => _buildDatePickerRow(type)),
           ..._kmBasedServiceTypes.map((type) =>
               _buildMileageInputRow(
-                type,
-                key: ValueKey('mileage_input_$type'),
-              )),
+                  type, key: ValueKey('mileage_input_$type'))),
           const SizedBox(height: 16),
           TextButton.icon(
               icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
@@ -582,43 +1022,37 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
     }
     bool isEnabled = _serviceEnabledStates[serviceType] ?? false;
     return _buildServiceTile(
-      key: key,
-      title: serviceType,
-      isEnabled: isEnabled,
-      errorText: _serviceErrors[serviceType],
-      onToggle: (value) {
-        setState(() {
-          _serviceEnabledStates[serviceType] = value;
-          // Most már a checkbox bekapcsolásakor is validálunk/kitöltünk
-          _validateService(
-              serviceType, _kmBasedServiceControllers[serviceType]?.text);
-          if (!value) _kmBasedServiceControllers[serviceType]?.clear();
-        });
-      },
-      child: SizedBox(
-        width: 120,
-        child: TextFormField(
-          controller: _kmBasedServiceControllers[serviceType],
-          enabled: isEnabled,
-          textAlign: TextAlign.right,
-          style: TextStyle(color: isEnabled ? Colors.white : Colors.grey[600]),
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onChanged: (value) {
-            // Gépelés közben is validálunk
-            _validateService(serviceType, value);
-            // setState itt nem kell, mert a _validateService már gondoskodik róla ha kell
-          },
-          decoration: InputDecoration(
-            hintText: 'km',
-            hintStyle: TextStyle(color: Colors.grey[700]),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-            border: InputBorder.none,
-          ),
-        ),
-      ),
-    );
+        key: key,
+        title: serviceType,
+        isEnabled: isEnabled,
+        errorText: _serviceErrors[serviceType],
+        onToggle: (value) {
+          setState(() {
+            _serviceEnabledStates[serviceType] = value;
+            _validateService(
+                serviceType, _kmBasedServiceControllers[serviceType]?.text);
+            if (!value) _kmBasedServiceControllers[serviceType]?.clear();
+          });
+        },
+        child: SizedBox(
+            width: 120,
+            child: TextFormField(
+                controller: _kmBasedServiceControllers[serviceType],
+                enabled: isEnabled,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                    color: isEnabled ? Colors.white : Colors.grey[600]),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) {
+                  _validateService(serviceType, value);
+                },
+                decoration: InputDecoration(
+                    hintText: 'km',
+                    hintStyle: TextStyle(color: Colors.grey[700]),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    border: InputBorder.none))));
   }
 
   Widget _buildSectionCard(
@@ -646,15 +1080,18 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
         ]));
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {bool required = true,
-        bool optional = false,
-        TextInputType keyboardType = TextInputType.text,
-        int? maxLength,
-        IconData? icon}) {
+  Widget _buildTextField({TextEditingController? controller,
+    String? label,
+    bool required = true,
+    bool optional = false,
+    TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
+    IconData? icon,
+    Widget? child}) {
     Color color =
-        _iconColors[label.replaceAll(' (opcionális)', '')] ?? Colors.grey;
-    return TextFormField(
+        _iconColors[label?.replaceAll(' (opcionális)', '')] ?? Colors.grey;
+
+    Widget content = child ?? TextFormField(
         controller: controller,
         style: const TextStyle(color: Colors.white),
         maxLength: maxLength,
@@ -664,25 +1101,11 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
             : [],
         decoration: InputDecoration(
             labelText: optional ? '$label (opcionális)' : label,
-            prefixIcon: icon != null ? _buildGradientIcon(icon, color) : null,
             labelStyle: const TextStyle(color: Colors.white70),
-            filled: true,
-            fillColor: Colors.black.withOpacity(0.3),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.orange, width: 2)),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                const BorderSide(color: Colors.redAccent, width: 1)),
-            focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                const BorderSide(color: Colors.redAccent, width: 2)),
-            counterText: ''),
+            border: InputBorder.none,
+            counterText: '',
+            contentPadding: EdgeInsets.zero
+        ),
         validator: (value) {
           if (!optional && required && (value == null || value.isEmpty)) {
             return 'Kötelező mező';
@@ -693,17 +1116,34 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
               value.length != 4) return '4 számjegy';
           return null;
         });
+
+
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            if (icon != null) _buildGradientIcon(icon: icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(child: content),
+          ],
+        )
+    );
   }
 
   Widget _buildDropdown({required String label, IconData? icon}) {
     Color color = _iconColors[label] ?? Colors.grey;
     return Container(
-        padding: const EdgeInsets.only(right: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12)),
         child: Row(children: [
-          if (icon != null) _buildGradientIcon(icon, color, isDropdown: true),
+          if (icon != null) _buildGradientIcon(icon: icon, color: color),
+          const SizedBox(width: 12),
           Expanded(
               child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -726,10 +1166,9 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
         ]));
   }
 
-  Widget _buildGradientIcon(IconData icon, Color color,
-      {bool isDropdown = false}) {
+  Widget _buildGradientIcon({required IconData icon, required Color color}) {
     return Container(
-        margin: const EdgeInsets.only(left: 12, right: 12, top: 4, bottom: 4),
+        margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -780,7 +1219,8 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
                     Expanded(
                         child: Text(title,
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 16))),
+                                color: Colors.white,
+                                fontSize: 16))),
                     child
                   ]),
                   if (hasError && isEnabled)
@@ -796,7 +1236,7 @@ class _JarmuHozzaadasaState extends State<JarmuHozzaadasa> {
                                     ? 'Ez több, mint a jármű aktuális KM-e!'
                                     : errorText == 'Fő km állás hiányzik!'
                                     ? 'Előbb add meg a fő kilométeróra állást!'
-                                    : errorText,
+                                    : errorText!,
                                 style: const TextStyle(
                                     color: Colors.redAccent,
                                     fontSize: 12))))
