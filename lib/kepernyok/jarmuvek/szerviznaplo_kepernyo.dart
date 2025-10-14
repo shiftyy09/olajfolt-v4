@@ -1,10 +1,11 @@
-// lib/kepernyok/jarmuvek/szerviznaplo_kepernyo.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../alap/adatbazis/adatbazis_kezelo.dart';
 import '../../modellek/jarmu.dart';
-import '../../modellek/karbantartas.dart';
+
+// === JAVÍTÁS 1: A HELYES, ÚJ SZERVIZ MODELL IMPORTÁLÁSA ===
+import '../../modellek/karbantartas_bejegyzes.dart';
 
 class SzerviznaploKepernyo extends StatefulWidget {
   final Jarmu vehicle;
@@ -16,56 +17,34 @@ class SzerviznaploKepernyo extends StatefulWidget {
 }
 
 class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
-  late Future<List<Karbantartas>> _maintenanceRecordsFuture;
+  // === JAVÍTÁS 2: A FUTURE MÁR SZERVIZ LISTÁT VÁR ===
+  late Future<List<Szerviz>> _serviceRecordsFuture;
   late Jarmu _currentVehicle;
-
-  // JAVÍTVA: A felesleges vezérlők törölve
-  final _mileageController = TextEditingController();
-  String? _selectedServiceType;
-  DateTime _selectedDate = DateTime.now();
-
-  final List<String> _serviceTypes = [
-    'Olajcsere',
-    'Levegőszűrő csere',
-    'Pollenszűrő csere',
-    'Üzemanyagszűrő csere',
-    'Vezérműszíj/lánc csere',
-    'Akkumulátor csere',
-    'Fékbetét csere (első)',
-    'Fékbetét csere (hátsó)',
-    'Fékfolyadék csere',
-    'Hűtőfolyadék csere',
-    'Műszaki vizsga',
-    'Egyéb ellenőrzés',
-  ];
 
   @override
   void initState() {
     super.initState();
     _currentVehicle = widget.vehicle;
-    _loadMaintenanceRecords();
+    _loadServiceRecords();
   }
 
-  void _loadMaintenanceRecords() {
+  void _loadServiceRecords() {
     setState(() {
-      _maintenanceRecordsFuture = AdatbazisKezelo.instance
-          .getMaintenanceForVehicle(_currentVehicle.id!)
-          .then((maps) =>
-          maps.map((map) => Karbantartas.fromMap(map)).toList());
+      // === JAVÍTÁS 3: A HELYES ADATBÁZIS FÜGGVÉNY HÍVÁSA ===
+      _serviceRecordsFuture = AdatbazisKezelo.instance
+          .getServicesForVehicle(_currentVehicle.id!)
+          .then((maps) => maps.map((map) => Szerviz.fromMap(map)).toList());
     });
   }
 
-  @override
-  void dispose() {
-    _mileageController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _addOrEditMaintenance({Karbantartas? record}) async {
-    _selectedServiceType = record?.serviceType;
-    _mileageController.text = record?.mileage.toString() ?? '';
-    _selectedDate =
-    record != null ? DateTime.parse(record.date) : DateTime.now();
+  Future<void> _addOrEditService({Szerviz? record}) async {
+    // Vezérlők inicializálása a felugró ablakhoz
+    final descriptionController = TextEditingController(
+        text: record?.description);
+    final costController = TextEditingController(text: record?.cost.toString());
+    final mileageController = TextEditingController(
+        text: record?.mileage.toString());
+    DateTime selectedDate = record?.date ?? DateTime.now();
 
     final bool? success = await showDialog<bool>(
       context: context,
@@ -74,23 +53,33 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: const Color(0xFF1E1E1E),
-              title: Text(record == null
-                  ? 'Új Szervizbejegyzés'
-                  : 'Bejegyzés Szerkesztése',
-                  style: const TextStyle(color: Colors.white)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              title: Text(
+                  record == null ? 'Új Szervizesemény' : 'Esemény Szerkesztése',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Szerviz típus választó
-                    _buildDropdown(setDialogState),
+                    _buildTextField(
+                        descriptionController, 'Leírás (pl. Olajcsere)',
+                        Icons.description),
                     const SizedBox(height: 16),
-                    // Dátum választó
-                    _buildDatePicker(),
+                    _buildTextField(costController, 'Költség (Ft)', Icons.paid,
+                        keyboardType: TextInputType.number),
                     const SizedBox(height: 16),
-                    // Km óra állás
-                    _buildTextField(_mileageController, 'Kilométeróra-állás',
-                        TextInputType.number),
+                    _buildTextField(
+                        mileageController, 'Kilométeróra-állás', Icons.speed,
+                        keyboardType: TextInputType.number),
+                    const SizedBox(height: 16),
+                    _buildDatePicker(
+                      selectedDate,
+                          (newDate) {
+                        setDialogState(() => selectedDate = newDate);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -100,31 +89,33 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
                   child: const Text(
                       'Mégse', style: TextStyle(color: Colors.white70)),
                 ),
-                TextButton(
+                ElevatedButton(
                   onPressed: () async {
-                    if (_selectedServiceType == null) return;
-                    if (_mileageController.text.isEmpty &&
-                        _selectedServiceType != 'Műszaki vizsga') return;
+                    if (descriptionController.text.isEmpty) return;
 
-                    // JAVÍTVA: A Karbantartas objektum a helyes, egyszerűsített formában jön létre
-                    final newRecord = Karbantartas(
+                    // === JAVÍTÁS 4: ÚJ SZERVIZ OBJEKTUM LÉTREHOZÁSA ===
+                    final newRecord = Szerviz(
                       id: record?.id,
                       vehicleId: _currentVehicle.id!,
-                      serviceType: _selectedServiceType!,
-                      date: _selectedDate.toIso8601String(),
-                      mileage: int.tryParse(_mileageController.text) ?? 0,
+                      description: descriptionController.text,
+                      date: selectedDate,
+                      cost: int.tryParse(costController.text) ?? 0,
+                      mileage: int.tryParse(mileageController.text) ?? 0,
                     );
 
                     final db = AdatbazisKezelo.instance;
+                    // === JAVÍTÁS 5: A HELYES TÁBLÁBA MENTÜNK ===
                     if (record == null) {
-                      await db.insert('maintenance', newRecord.toMap());
+                      await db.insert('services', newRecord.toMap());
                     } else {
-                      await db.update('maintenance', newRecord.toMap());
+                      await db.update('services', newRecord.toMap());
                     }
                     Navigator.of(context).pop(true);
                   },
-                  child: const Text(
-                      'Mentés', style: TextStyle(color: Colors.orange)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange),
+                  child: const Text('Mentés', style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -134,100 +125,69 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
     );
 
     if (success == true) {
-      _loadMaintenanceRecords();
+      _loadServiceRecords(); // Adatok újratöltése mentés után
     }
   }
 
-  Widget _buildDropdown(StateSetter setDialogState) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFF252525),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedServiceType,
-          hint: const Text('Válassz szerviz típust...',
-              style: TextStyle(color: Colors.white70)),
-          isExpanded: true,
-          dropdownColor: const Color(0xFF252525),
-          style: const TextStyle(color: Colors.white, fontSize: 16),
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.orange),
-          onChanged: (String? newValue) {
-            setDialogState(() {
-              _selectedServiceType = newValue;
-            });
-          },
-          items: _serviceTypes.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDatePicker() {
-    return InkWell(
-      onTap: () async {
-        final DateTime? picked = await showDatePicker(
-          context: context,
-          initialDate: _selectedDate,
-          firstDate: DateTime(2000),
-          lastDate: DateTime.now(),
-        );
-        if (picked != null && picked != _selectedDate) {
-          setState(() {
-            _selectedDate = picked;
-          });
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
-        decoration: BoxDecoration(
-          color: const Color(0xFF252525),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              DateFormat('yyyy. MM. dd.').format(_selectedDate),
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-            ),
-            const Icon(Icons.calendar_today, color: Colors.white70, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
+  // === ÚJ, LETISZTULT WIDGET ÉPÍTŐK A FELUGRÓ ABLAKHOZ ===
 
   Widget _buildTextField(TextEditingController controller, String label,
-      TextInputType keyboardType) {
+      IconData icon, {TextInputType keyboardType = TextInputType.text}) {
     return TextField(
       controller: controller,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.white70, size: 20),
         filled: true,
         fillColor: const Color(0xFF252525),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.orange),
-        ),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Colors.orange)),
       ),
       keyboardType: keyboardType,
-      inputFormatters: keyboardType == TextInputType.number
-          ? [FilteringTextInputFormatter.digitsOnly]
-          : [],
+      inputFormatters: keyboardType == TextInputType.number ? [
+        FilteringTextInputFormatter.digitsOnly
+      ] : [],
+    );
+  }
+
+  Widget _buildDatePicker(DateTime date, Function(DateTime) onDateChanged) {
+    return InkWell(
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: date,
+          firstDate: DateTime(2000),
+          lastDate: DateTime.now(),
+        );
+        if (picked != null && picked != date) {
+          onDateChanged(picked);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+        decoration: BoxDecoration(color: const Color(0xFF252525),
+            borderRadius: BorderRadius.circular(10)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                    Icons.calendar_today, color: Colors.white70, size: 20),
+                const SizedBox(width: 12),
+                Text(DateFormat('yyyy. MM. dd.').format(date),
+                    style: const TextStyle(color: Colors.white, fontSize: 16)),
+              ],
+            ),
+            const Icon(Icons.arrow_drop_down, color: Colors.white70),
+          ],
+        ),
+      ),
     );
   }
 
@@ -240,8 +200,9 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: FutureBuilder<List<Karbantartas>>(
-        future: _maintenanceRecordsFuture,
+      // === JAVÍTÁS 6: A FUTUREBUILDER IS SZERVIZ TÍPUST VÁR ===
+      body: FutureBuilder<List<Szerviz>>(
+        future: _serviceRecordsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -271,23 +232,25 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 10),
                     title: Text(
-                        record.serviceType, style: const TextStyle(color: Colors
+                        record.description, style: const TextStyle(color: Colors
                         .orange, fontWeight: FontWeight.bold)),
                     subtitle: Text(
-                      '${DateFormat('yyyy. MM. dd.').format(DateTime.parse(
-                          record.date))}\n${record.mileage} km',
+                      '${NumberFormat
+                          .currency(
+                          locale: 'hu_HU', symbol: 'Ft', decimalDigits: 0)
+                          .format(record.cost)}\n'
+                          '${DateFormat('yyyy. MM. dd.').format(record
+                          .date)} • ${record.mileage} km',
                       style: const TextStyle(color: Colors.white70,
-                          height: 1.4),
+                          height: 1.5),
                     ),
-                    // JAVÍTVA: A 'cost' megjelenítése el lett távolítva
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(
                               Icons.edit, color: Colors.blueAccent),
-                          onPressed: () =>
-                              _addOrEditMaintenance(record: record),
+                          onPressed: () => _addOrEditService(record: record),
                         ),
                         IconButton(
                           icon: const Icon(
@@ -321,15 +284,16 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
                                   ),
                             );
                             if (confirm == true) {
+                              // === JAVÍTÁS 7: A HELYES 'services' TÁBLÁBÓL TÖRLÜNK ===
                               await AdatbazisKezelo.instance.delete(
-                                  'maintenance', record.id!);
-                              _loadMaintenanceRecords();
+                                  'services', record.id!);
+                              _loadServiceRecords();
                             }
                           },
                         ),
                       ],
                     ),
-                    onTap: () => _addOrEditMaintenance(record: record),
+                    onTap: () => _addOrEditService(record: record),
                   ),
                 );
               },
@@ -338,7 +302,7 @@ class _SzerviznaploKepernyoState extends State<SzerviznaploKepernyo> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _addOrEditMaintenance(),
+        onPressed: () => _addOrEditService(),
         backgroundColor: Colors.orange,
         child: const Icon(Icons.add, color: Colors.black),
       ),

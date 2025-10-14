@@ -1,10 +1,10 @@
+import 'package:car_maintenance_app/kepernyok/beallitasok/beallitasok_kepernyo.dart';
 import 'package:car_maintenance_app/kepernyok/fogyasztas/fogyasztas_kalkulator_kepernyo.dart';
 import 'package:car_maintenance_app/kepernyok/jarmuvek/jarmupark_kepernyo.dart';
 import 'package:car_maintenance_app/kepernyok/karbantartas/karbantartas_emlekezteto.dart';
 import 'package:car_maintenance_app/kepernyok/jarmuvek/szerviznaplo_kepernyo.dart';
 import 'package:car_maintenance_app/modellek/jarmu.dart';
 import 'package:flutter/material.dart';
-
 import '../../alap/adatbazis/adatbazis_kezelo.dart';
 
 class FooldalKepernyo extends StatefulWidget {
@@ -94,10 +94,8 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
     );
 
     if (selected != null) {
-      Widget page;
       if (destination == 'szerviznaplo') {
-        page = SzerviznaploKepernyo(vehicle: selected);
-        _navigateTo(page);
+        _navigateTo(SzerviznaploKepernyo(vehicle: selected));
       }
     }
   }
@@ -146,7 +144,7 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
                             _navigateTo(const KarbantartasEmlekezteto()),
                       ),
 
-                      // JAVÍTVA: A FOGYASZTÁS KALKULÁTOR KÁRTYA
+                      // FOGYASZTÁS KALKULÁTOR KÁRTYA
                       _buildMenuCard(
                         context,
                         icon: Icons.calculate,
@@ -166,6 +164,22 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
                         color: Colors.blueAccent,
                         onTap: () => _selectVehicleAndNavigate('szerviznaplo'),
                       ),
+
+                      // 2. LÉPÉS: Ide illesztjük be az új Beállítások kártyát
+                      _buildMenuCard(
+                        context,
+                        icon: Icons.settings,
+                        // Ikon
+                        title: 'Beállítások',
+                        // Cím
+                        subtitle: 'Import, export és egyéb opciók',
+                        // Alcím
+                        color: Colors.grey.shade600,
+                        // Szín
+                        onTap: () =>
+                            _navigateTo(
+                                const BeallitasokKepernyo()), // Navigáció az új képernyőre
+                      ),
                     ],
                   ),
                 ),
@@ -177,6 +191,7 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
     );
   }
 
+  // Az _buildMenuCard függvény változatlan marad
   Widget _buildMenuCard(BuildContext context, {
     required IconData icon,
     required String title,

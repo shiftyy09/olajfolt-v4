@@ -1,40 +1,42 @@
-class KarbantartasBejegyzes {
+// lib/modellek/karbantartas_bejegyzes.dart
+
+// Átnevezzük az osztályt Szerviz-re a logikai tisztaság kedvéért
+class Szerviz {
   final int? id;
   final int vehicleId;
-  final String date;
-  final int mileage;
-  final String servicePlace;
-  final String description;
-  final double laborCost;
-  final double partsCost;
-  final double totalCost;
-  final String? notes;
+  final String description; // Leírás
+  final DateTime date; // Dátum
+  final int cost; // Költség
+  final int mileage; // Km állás
 
-  KarbantartasBejegyzes({
+  Szerviz({
     this.id,
     required this.vehicleId,
-    required this.date,
-    required this.mileage,
-    required this.servicePlace,
     required this.description,
-    required this.laborCost,
-    required this.partsCost,
-    required this.totalCost,
-    this.notes,
+    required this.date,
+    required this.cost,
+    required this.mileage,
   });
 
-  factory KarbantartasBejegyzes.fromMap(Map<String, dynamic> map) {
-    return KarbantartasBejegyzes(
+  factory Szerviz.fromMap(Map<String, dynamic> map) {
+    return Szerviz(
       id: map['id'],
       vehicleId: map['vehicleId'],
-      date: map['date'],
-      mileage: map['mileage'],
-      servicePlace: map['servicePlace'],
       description: map['description'],
-      laborCost: map['laborCost'],
-      partsCost: map['partsCost'],
-      totalCost: map['totalCost'],
-      notes: map['notes'],
+      date: DateTime.parse(map['date']),
+      cost: map['cost'],
+      mileage: map['mileage'],
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'vehicleId': vehicleId,
+      'description': description,
+      'date': date.toIso8601String(),
+      'cost': cost,
+      'mileage': mileage,
+    };
   }
 }

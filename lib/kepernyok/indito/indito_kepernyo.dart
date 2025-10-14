@@ -1,6 +1,6 @@
 // lib/kepernyok/indito/indito_kepernyo.dart
 import 'package:flutter/material.dart';
-import '../../alap/adatbazis/adatbazis_kezelo.dart'; // <-- Fontos: importáljuk az adatbázis-kezelőt
+import '../../alap/adatbazis/adatbazis_kezelo.dart';
 import '../fooldal/fooldal_kepernyo.dart';
 
 class InditoKepernyo extends StatefulWidget {
@@ -10,7 +10,6 @@ class InditoKepernyo extends StatefulWidget {
   State<InditoKepernyo> createState() => _InditoKepernyoState();
 }
 
-// JAVÍTVA: Animációhoz szükséges 'Mixin' hozzáadása
 class _InditoKepernyoState extends State<InditoKepernyo>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
@@ -20,33 +19,39 @@ class _InditoKepernyoState extends State<InditoKepernyo>
   void initState() {
     super.initState();
     _setupAnimation();
-    _initializeApp(); // A navigációt átnevezzük és módosítjuk
+    _initializeApp();
   }
 
-  // JAVÍTVA: Pulzáló animáció beállítása
   void _setupAnimation() {
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )
-      ..repeat(reverse: true); // Ismétlődő, oda-vissza animáció
+      ..repeat(reverse: true);
 
     _fadeAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 
-  // JAVÍTVA: A navigációt az adatbázis betöltéséhez kötjük
+  // === JAVÍTVA A MINIMÁLIS VÁRAKOZÁSI IDŐVEL ===
   void _initializeApp() async {
-    // Elindítjuk az adatbázis-kapcsolat kiépítését a háttérben.
-    // Ez az első művelet, ami időbe telhet.
-    await AdatbazisKezelo.instance.database;
+    // Rögzítjük a kezdési időpontot
+    final startTime = DateTime.now();
 
-    // Amint az adatbázis kész, azonnal navigálunk.
-    // A 'mounted' ellenőrzés fontos, hogy ne fussunk hibára.
+    // 1. Elindítjuk az adatbázis betöltését
+    final dbFuture = AdatbazisKezelo.instance.database;
+
+    // 2. Létrehozunk egy jövőbeli eseményt, ami egy minimális idő múlva teljesül
+    // Itt állíthatod a várakozási időt, most 2500ms = 2.5 másodperc
+    final minDelayFuture = Future.delayed(const Duration(milliseconds: 1400));
+
+    // A Future.wait megvárja, amíg MINDKÉT művelet befejeződik
+    await Future.wait([dbFuture, minDelayFuture]);
+
+    // Navigáció, csak ha a képernyő még létezik
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        // Áttűnési animáció a szebb váltásért
         PageRouteBuilder(
           pageBuilder: (_, __, ___) => const FooldalKepernyo(),
           transitionsBuilder: (_, animation, __, child) {
@@ -57,6 +62,8 @@ class _InditoKepernyoState extends State<InditoKepernyo>
       );
     }
   }
+
+  // ===============================================
 
   @override
   void dispose() {
@@ -72,7 +79,6 @@ class _InditoKepernyoState extends State<InditoKepernyo>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // JAVÍTVA: A logót egy animációt kezelő widgetbe csomagoljuk
             FadeTransition(
               opacity: _fadeAnimation,
               child: Image.asset(
@@ -90,7 +96,6 @@ class _InditoKepernyoState extends State<InditoKepernyo>
                 color: Color.fromARGB(255, 255, 164, 0),
               ),
             ),
-            // JAVÍTVA: A felesleges töltésjelző és a nagy térköz eltávolítva
           ],
         ),
       ),

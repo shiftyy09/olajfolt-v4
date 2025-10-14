@@ -1,3 +1,5 @@
+// lib/modellek/jarmu.dart
+
 class Jarmu {
   final int? id;
   final String make;
@@ -45,8 +47,27 @@ class Jarmu {
     );
   }
 
-  @override
-  String toString() {
-    return 'Jarmu{id: $id, make: $make, model: $model, year: $year, licensePlate: $licensePlate, vin: $vin, mileage: $mileage, vezerlesTipusa: $vezerlesTipusa}';
+  // === EZT A BLOKKOT ADTAD HOZZÁ ===
+  Jarmu copyWith({
+    int? id,
+    String? make,
+    String? model,
+    int? year,
+    String? licensePlate,
+    String? vin,
+    int? mileage,
+    String? vezerlesTipusa,
+  }) {
+    return Jarmu(
+      id: id ?? this.id,
+      make: make ?? this.make,
+      model: model ?? this.model,
+      year: year ?? this.year,
+      licensePlate: licensePlate ?? this.licensePlate,
+      vin: vin ?? this.vin,
+      mileage: mileage ?? this.mileage,
+      vezerlesTipusa: vezerlesTipusa ?? this.vezerlesTipusa,
+    );
   }
+// === A BLOKK VÉGE ===
 }
