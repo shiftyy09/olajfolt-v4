@@ -4,6 +4,7 @@ import 'package:car_maintenance_app/kepernyok/jarmuvek/jarmupark_kepernyo.dart';
 import 'package:car_maintenance_app/kepernyok/karbantartas/karbantartas_emlekezteto.dart';
 import 'package:car_maintenance_app/kepernyok/jarmuvek/szerviznaplo_kepernyo.dart';
 import 'package:car_maintenance_app/modellek/jarmu.dart';
+import 'package:car_maintenance_app/widgetek/kozos_menu_kartya.dart';
 import 'package:flutter/material.dart';
 import '../../alap/adatbazis/adatbazis_kezelo.dart';
 
@@ -96,6 +97,8 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
     if (selected != null) {
       if (destination == 'szerviznaplo') {
         _navigateTo(SzerviznaploKepernyo(vehicle: selected));
+      } else if (destination == 'kalkulator') {
+        _navigateTo(FogyasztasKalkulatorKepernyo(vehicle: selected));
       }
     }
   }
@@ -121,21 +124,16 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
                 child: SlideTransition(
                   position: _slideAnimation,
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(vertical: 10.0),
                     children: [
-                      // JÁRMŰPARK KÁRTYA
-                      _buildMenuCard(
-                        context,
+                      KozosMenuKartya(
                         icon: Icons.directions_car_filled,
                         title: 'Járműpark',
                         subtitle: 'Autóid kezelése, adatok módosítása',
                         color: Colors.cyan,
                         onTap: () => _navigateTo(const JarmuparkKepernyo()),
                       ),
-
-                      // KARBANTARTÁSI EMLÉKEZTETŐ KÁRTYA
-                      _buildMenuCard(
-                        context,
+                      KozosMenuKartya(
                         icon: Icons.notifications_active,
                         title: 'Karbantartási Emlékeztető',
                         subtitle: 'Rögzített állapotok és esedékességek',
@@ -143,42 +141,26 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
                         onTap: () =>
                             _navigateTo(const KarbantartasEmlekezteto()),
                       ),
-
-                      // FOGYASZTÁS KALKULÁTOR KÁRTYA
-                      _buildMenuCard(
-                        context,
-                        icon: Icons.calculate,
-                        title: 'Fogyasztás kalkulátor',
-                        subtitle: 'Tervezett utak költségének becslése',
+                      KozosMenuKartya(
+                        icon: Icons.local_gas_station,
+                        title: 'Tankolási napló',
+                        subtitle: 'Havi üzemanyag költségek követése',
                         color: Colors.green,
-                        onTap: () =>
-                            _navigateTo(const FogyasztasKalkulatorKepernyo()),
+                        onTap: () => _selectVehicleAndNavigate('kalkulator'),
                       ),
-
-                      // SZERVIZNAPLÓ KÁRTYA
-                      _buildMenuCard(
-                        context,
+                      KozosMenuKartya(
                         icon: Icons.history_edu,
                         title: 'Szerviznapló',
                         subtitle: 'Elvégzett javítások és költségek',
                         color: Colors.blueAccent,
                         onTap: () => _selectVehicleAndNavigate('szerviznaplo'),
                       ),
-
-                      // 2. LÉPÉS: Ide illesztjük be az új Beállítások kártyát
-                      _buildMenuCard(
-                        context,
+                      KozosMenuKartya(
                         icon: Icons.settings,
-                        // Ikon
                         title: 'Beállítások',
-                        // Cím
                         subtitle: 'Import, export és egyéb opciók',
-                        // Alcím
                         color: Colors.grey.shade600,
-                        // Szín
-                        onTap: () =>
-                            _navigateTo(
-                                const BeallitasokKepernyo()), // Navigáció az új képernyőre
+                        onTap: () => _navigateTo(const BeallitasokKepernyo()),
                       ),
                     ],
                   ),
@@ -186,76 +168,6 @@ class _FooldalKepernyoState extends State<FooldalKepernyo>
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  // Az _buildMenuCard függvény változatlan marad
-  Widget _buildMenuCard(BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 8,
-      margin: const EdgeInsets.symmetric(vertical: 10.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15.0),
-        side: BorderSide(color: color.withOpacity(0.4), width: 1),
-      ),
-      color: const Color(0xFF1E1E1E),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15.0),
-        splashColor: color.withOpacity(0.2),
-        highlightColor: color.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withOpacity(0.6), color.withOpacity(0.9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 10,
-                        spreadRadius: 2),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 30),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 5),
-                    Text(subtitle,
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 14)),
-                  ],
-                ),
-              ),
-              const Icon(
-                  Icons.arrow_forward_ios, color: Colors.white24, size: 18),
-            ],
-          ),
         ),
       ),
     );

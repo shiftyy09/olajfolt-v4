@@ -1,13 +1,12 @@
 // lib/modellek/karbantartas_bejegyzes.dart
 
-// Átnevezzük az osztályt Szerviz-re a logikai tisztaság kedvéért
 class Szerviz {
   final int? id;
   final int vehicleId;
-  final String description; // Leírás
-  final DateTime date; // Dátum
-  final int cost; // Költség
-  final int mileage; // Km állás
+  final String description;
+  final DateTime date;
+  final int cost;
+  final int mileage;
 
   Szerviz({
     this.id,
@@ -17,6 +16,27 @@ class Szerviz {
     required this.cost,
     required this.mileage,
   });
+
+  // ===================================
+  //  ÚJ FÜGGVÉNY A HIBA JAVÍTÁSÁHOZ
+  // ===================================
+  Szerviz copyWith({
+    int? id,
+    int? vehicleId,
+    String? description,
+    DateTime? date,
+    int? cost,
+    int? mileage,
+  }) {
+    return Szerviz(
+      id: id ?? this.id,
+      vehicleId: vehicleId ?? this.vehicleId,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      cost: cost ?? this.cost,
+      mileage: mileage ?? this.mileage,
+    );
+  }
 
   factory Szerviz.fromMap(Map<String, dynamic> map) {
     return Szerviz(

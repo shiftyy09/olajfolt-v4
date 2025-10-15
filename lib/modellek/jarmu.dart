@@ -9,6 +9,7 @@ class Jarmu {
   final String? vin;
   final int mileage;
   final String? vezerlesTipusa;
+  final String? imagePath; // <-- ÚJ MEZŐ
 
   Jarmu({
     this.id,
@@ -19,6 +20,7 @@ class Jarmu {
     this.vin,
     required this.mileage,
     this.vezerlesTipusa,
+    this.imagePath, // <-- ÚJ PARAMÉTER
   });
 
   Map<String, dynamic> toMap() {
@@ -31,6 +33,7 @@ class Jarmu {
       'vin': vin,
       'mileage': mileage,
       'vezerlesTipusa': vezerlesTipusa,
+      'imagePath': imagePath, // <-- ÚJ
     };
   }
 
@@ -44,10 +47,10 @@ class Jarmu {
       vin: map['vin'],
       mileage: map['mileage'],
       vezerlesTipusa: map['vezerlesTipusa'],
+      imagePath: map['imagePath'], // <-- ÚJ
     );
   }
 
-  // === EZT A BLOKKOT ADTAD HOZZÁ ===
   Jarmu copyWith({
     int? id,
     String? make,
@@ -57,6 +60,7 @@ class Jarmu {
     String? vin,
     int? mileage,
     String? vezerlesTipusa,
+    String? imagePath, // <-- ÚJ
   }) {
     return Jarmu(
       id: id ?? this.id,
@@ -67,7 +71,7 @@ class Jarmu {
       vin: vin ?? this.vin,
       mileage: mileage ?? this.mileage,
       vezerlesTipusa: vezerlesTipusa ?? this.vezerlesTipusa,
+      imagePath: imagePath ?? this.imagePath, // <-- ÚJ
     );
   }
-// === A BLOKK VÉGE ===
 }

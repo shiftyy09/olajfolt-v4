@@ -1,52 +1,31 @@
-// lib/alap/adatbazis/adatbazis_kezelo.dart
-
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 
 class AdatbazisKezelo {
-  AdatbazisKezelo._privateConstructor();
-
-  static final AdatbazisKezelo instance = AdatbazisKezelo._privateConstructor();
-
+  static final AdatbazisKezelo instance = AdatbazisKezelo._init();
   static Database? _database;
 
-  Future<Database> get database async => _database ??= await _initDatabase();
+  AdatbazisKezelo._init();
 
-  Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'car_maintenance.db');
-    return await openDatabase(
-      path,
-      version: 3, // A verziószám maradhat, ha nem változott a struktúra
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('car_maintenance.db');
+    return _database!;
   }
 
-  Future<void> _onCreate(Database db, int version) async {
-    await _createAllTables(db);
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+
+    // Verziószám növelése 5-re, hogy az onUpgrade biztosan lefusson
+    return await openDatabase(path,
+        version: 5, onCreate: _createAllTables, onUpgrade: _onUpgrade);
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Ez akkor fut le, ha növeled a verziószámot.
-    // A jelenlegi struktúrával ez már nem szükséges, de biztonságból itt hagyható.
-    if (oldVersion < 3) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS services (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          vehicleId INTEGER NOT NULL,
-          description TEXT NOT NULL,
-          date TEXT NOT NULL,
-          cost INTEGER NOT NULL,
-          mileage INTEGER NOT NULL,
-          FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
-        )
-      ''');
-    }
-  }
-
-  Future<void> _createAllTables(Database db) async {
+  // Létrehozza az összes táblát a helyes sémával
+  Future<void> _createAllTables(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE vehicles(
+      CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         make TEXT NOT NULL,
         model TEXT NOT NULL,
@@ -54,66 +33,74 @@ class AdatbazisKezelo {
         licensePlate TEXT NOT NULL UNIQUE,
         vin TEXT,
         mileage INTEGER NOT NULL,
-        vezerlesTipusa TEXT
+        vezerlesTipusa TEXT NOT NULL,
+        imagePath TEXT  -- Itt van a hiányzó oszlop, TEXT típussal
       )
     ''');
-    // A régi 'maintenance' és 'service_intervals' táblákra már nincs szükség,
-    // de ha nem törlöd őket, az sem okoz problémát.
-    // Az egyszerűség kedvéért az új telepítéseknél már nem is hozzuk létre őket.
+
     await db.execute('''
       CREATE TABLE services (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vehicleId INTEGER NOT NULL,
         description TEXT NOT NULL,
         date TEXT NOT NULL,
-        cost INTEGER NOT NULL,
         mileage INTEGER NOT NULL,
+        cost REAL NOT NULL,
         FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
       )
     ''');
   }
 
-  // --- LEKÉRDEZŐ FÜGGVÉNYEK ---
+  // Egyszerűsített onUpgrade: Eldobja a régi táblákat és újra létrehozza őket
+  // Ez biztosítja, hogy tiszta telepítéskor is a legfrissebb séma jöjjön létre.
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    await db.execute('DROP TABLE IF EXISTS services');
+    await db.execute('DROP TABLE IF EXISTS vehicles');
+    await _createAllTables(db, newVersion);
+  }
+
+  // === CRUD Műveletek ===
+
+  Future<int> insert(String table, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert(table, row);
+  }
+
+  Future<List<Map<String, dynamic>>> queryAllRows(String table) async {
+    final db = await instance.database;
+    return await db.query(table);
+  }
+
+  Future<int> update(String table, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    int id = row['id'];
+    return await db.update(table, row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> delete(String table, int id) async {
+    final db = await instance.database;
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // === Specifikus lekérdezések ===
 
   Future<List<Map<String, dynamic>>> getVehicles() async {
-    Database db = await instance.database;
+    final db = await instance.database;
     return await db.query('vehicles', orderBy: 'make, model');
   }
 
   Future<List<Map<String, dynamic>>> getServicesForVehicle(
       int vehicleId) async {
     final db = await instance.database;
-    return await db.query(
-      'services',
-      where: 'vehicleId = ?',
-      whereArgs: [vehicleId],
-      orderBy: 'date DESC, mileage DESC', // Először dátum, aztán km szerint
-    );
+    return await db.query('services',
+        where: 'vehicleId = ?',
+        whereArgs: [vehicleId],
+        orderBy: 'date DESC, mileage DESC');
   }
 
-  // --- MÓDOSÍTÓ FÜGGVÉNYEK ---
-
-  Future<int> insert(String table, Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    return await db.insert(table, row);
-  }
-
-  Future<int> update(String table, Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = row['id'];
-    return await db.update(table, row, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> delete(String table, int id) async {
-    Database db = await instance.database;
-    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
-  }
-
-  // === EZ AZ ÚJ FÜGGVÉNY, AMIT KÉRTÉL ===
-  // Törli az összes 'services' bejegyzést, ami egy adott járműhöz tartozik.
-  // Ez kell ahhoz, hogy a jármű szerkesztésekor felül tudjuk írni az automatikus bejegyzéseket.
-  Future<void> deleteServicesForVehicle(int vehicleId) async {
+  Future<int> deleteServicesForVehicle(int vehicleId) async {
     final db = await instance.database;
-    await db.delete('services', where: 'vehicleId = ?', whereArgs: [vehicleId]);
+    return await db
+        .delete('services', where: 'vehicleId = ?', whereArgs: [vehicleId]);
   }
 }
