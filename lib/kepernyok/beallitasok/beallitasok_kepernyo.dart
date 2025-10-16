@@ -1,7 +1,8 @@
 import 'package:car_maintenance_app/alap/adatbazis/adatbazis_kezelo.dart';
 import 'package:car_maintenance_app/modellek/jarmu.dart';
+import 'package:car_maintenance_app/szolgaltatasok/csv_szolgaltatas.dart'; // ÚJ IMPORT
 import 'package:car_maintenance_app/szolgaltatasok/pdf_szolgaltatas.dart';
-import 'package:car_maintenance_app/widgetek/kozos_menu_kartya.dart'; // <-- ÚJ IMPORT
+import 'package:car_maintenance_app/widgetek/kozos_widgetek.dart';
 import 'package:flutter/material.dart';
 
 class BeallitasokKepernyo extends StatefulWidget {
@@ -13,17 +14,20 @@ class BeallitasokKepernyo extends StatefulWidget {
 
 class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
   final PdfSzolgaltatas _pdfSzolgaltatas = PdfSzolgaltatas();
-  bool _isExporting = false;
+  final CsvSzolgaltatas _csvSzolgaltatas = CsvSzolgaltatas(); // ÚJ PÉLDÁNY
+  bool _isPdfExporting = false;
+  bool _isCsvExporting = false; // ÚJ ÁLLAPOT
 
+  // PDF Export (VÁLTOZATLAN)
   Future<void> _handlePdfExport() async {
-    setState(() => _isExporting = true);
+    setState(() => _isPdfExporting = true);
 
     final db = AdatbazisKezelo.instance;
     final vehiclesMap = await db.getVehicles();
     final vehicles = vehiclesMap.map((map) => Jarmu.fromMap(map)).toList();
 
     if (!mounted) {
-      setState(() => _isExporting = false);
+      setState(() => _isPdfExporting = false);
       return;
     }
 
@@ -31,7 +35,7 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Nincs jármű a parkban, nincs mit exportálni!'),
           backgroundColor: Colors.redAccent));
-      setState(() => _isExporting = false);
+      setState(() => _isPdfExporting = false);
       return;
     }
 
@@ -40,8 +44,8 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
       builder: (context) =>
           AlertDialog(
             backgroundColor: const Color(0xFF1E1E1E),
-            title: const Text(
-                'Válassz járművet', style: TextStyle(color: Colors.white)),
+            title: const Text('Válassz járművet',
+                style: TextStyle(color: Colors.white)),
             content: SizedBox(
               width: double.maxFinite,
               child: ListView.builder(
@@ -60,7 +64,7 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
     );
 
     if (selectedVehicle == null) {
-      setState(() => _isExporting = false);
+      setState(() => _isPdfExporting = false);
       return;
     }
 
@@ -69,8 +73,8 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
       builder: (context) =>
           AlertDialog(
             backgroundColor: const Color(0xFF1E1E1E),
-            title: const Text(
-                'Válassz műveletet', style: TextStyle(color: Colors.white)),
+            title: const Text('Válassz műveletet',
+                style: TextStyle(color: Colors.white)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -82,8 +86,8 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.share, color: Colors.white70),
-                  title: const Text(
-                      'Megosztás...', style: TextStyle(color: Colors.white)),
+                  title: const Text('Megosztás...',
+                      style: TextStyle(color: Colors.white)),
                   onTap: () => Navigator.of(context).pop(ExportAction.share),
                 ),
               ],
@@ -92,7 +96,7 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
     );
 
     if (action == null) {
-      setState(() => _isExporting = false);
+      setState(() => _isPdfExporting = false);
       return;
     }
 
@@ -108,16 +112,41 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hiba az exportálás során: $e'),
+          SnackBar(
+              content: Text('Hiba az exportálás során: $e'),
               backgroundColor: Colors.red),
         );
       }
     }
 
-    setState(() => _isExporting = false);
+    setState(() => _isPdfExporting = false);
   }
 
-  // === FELÜLET ÉPÍTÉSE AZ ÚJ WIDGETTEL ===
+  // === ÚJ FUNKCIÓ: CSV Export ===
+  Future<void> _handleCsvExport() async {
+    setState(() => _isCsvExporting = true);
+
+    final String? filePath = await _csvSzolgaltatas.exportAllDataToCsv();
+
+    if (!mounted) return;
+
+    if (filePath != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Minden adat sikeresen exportálva a "Letöltések" mappába!'),
+        backgroundColor: Colors.green,
+      ));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Hiba a CSV exportálás során.'),
+        backgroundColor: Colors.redAccent,
+      ));
+    }
+
+    setState(() => _isCsvExporting = false);
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -130,15 +159,14 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 10.0),
         children: [
-          // ADATKEZELÉS SZEKCIÓ
           _buildSectionHeader(context, 'Adatkezelés'),
           KozosMenuKartya(
             icon: Icons.picture_as_pdf,
             title: 'Adatlap exportálása (PDF)',
             subtitle: 'Generálj egy adatlapot a járművedről',
             color: Colors.red.shade400,
-            onTap: _isExporting ? () {} : _handlePdfExport,
-            trailing: _isExporting
+            onTap: _isPdfExporting ? () {} : _handlePdfExport,
+            trailing: _isPdfExporting
                 ? const SizedBox(
                 width: 24,
                 height: 24,
@@ -150,12 +178,14 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
             title: 'Mentés exportálása (CSV)',
             subtitle: 'Minden adat kimentése egyetlen fájlba',
             color: Colors.blue.shade400,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('CSV export funkció hamarosan...')),
-              );
-            },
+            onTap: _isCsvExporting ? () {} : _handleCsvExport,
+            // CSERÉLVE
+            trailing: _isCsvExporting // ÚJ
+                ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2))
+                : null,
           ),
           KozosMenuKartya(
             icon: Icons.download,
@@ -169,10 +199,7 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
               );
             },
           ),
-
           const SizedBox(height: 20),
-
-          // ÉRTESÍTÉSEK SZEKCIÓ
           _buildSectionHeader(context, 'Értesítések'),
           KozosMenuKartya(
             icon: Icons.notifications_active,
@@ -180,23 +207,19 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
             subtitle: 'Értesítés a közelgő eseményekről',
             color: Colors.orange.shade400,
             onTap: () {},
-            // A kártya is kattintható lehet, vagy csak a switch
             trailing: Switch(
-              value: false, // Inaktív alapból, amíg nincs kész
+              value: false,
               onChanged: (bool value) {},
               activeColor: Colors.orange.shade400,
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // INFORMÁCIÓ SZEKCIÓ
           _buildSectionHeader(context, 'Információ'),
           KozosMenuKartya(
             icon: Icons.info_outline,
             title: 'Névjegy',
             subtitle: 'Verzió: 1.0.0',
-            color: Colors.purple.shade300,
+            color: Colors.orange.shade400,
             onTap: () {},
           ),
         ],
@@ -204,7 +227,6 @@ class _BeallitasokKepernyoState extends State<BeallitasokKepernyo> {
     );
   }
 
-  // Szekció cím widget
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20.0, 16.0, 16.0, 8.0),

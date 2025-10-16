@@ -18,7 +18,7 @@ class Szerviz {
   });
 
   // ===================================
-  //  ÚJ FÜGGVÉNY A HIBA JAVÍTÁSÁHOZ
+  //  A copyWith függvény (ez már jó volt)
   // ===================================
   Szerviz copyWith({
     int? id,
@@ -38,13 +38,18 @@ class Szerviz {
     );
   }
 
+  // ===================================
+  //  A JAVÍTOTT fromMap FÜGGVÉNY
+  // ===================================
   factory Szerviz.fromMap(Map<String, dynamic> map) {
     return Szerviz(
       id: map['id'],
       vehicleId: map['vehicleId'],
       description: map['description'],
       date: DateTime.parse(map['date']),
-      cost: map['cost'],
+      // JAVÍTÁS: A 'cost' értéket, ami 'double' is lehet, 'int'-té alakítjuk.
+      // A '(map['cost'] as num)' biztosítja, hogy int és double esetén is helyesen működjön.
+      cost: (map['cost'] as num).toInt(),
       mileage: map['mileage'],
     );
   }

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:car_maintenance_app/modellek/jarmu.dart';
 import 'package:car_maintenance_app/modellek/karbantartas_bejegyzes.dart';
-import 'package:device_info_plus/device_info_plus.dart'; // <--- ÚJ FONTOS IMPORT
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -37,6 +37,8 @@ class PdfSzolgaltatas {
     final serviceRecordsMap = await db.getServicesForVehicle(vehicle.id!);
     final serviceRecords = serviceRecordsMap
         .map((map) => Szerviz.fromMap(map))
+        .where((szerviz) =>
+    !szerviz.description.toLowerCase().contains('tankolás'))
         .toList();
 
     final fontData = await rootBundle.load("assets/fonts/Roboto-Regular.ttf");
@@ -44,20 +46,21 @@ class PdfSzolgaltatas {
     final ttf = pw.Font.ttf(fontData);
     final boldTtf = pw.Font.ttf(boldFontData);
 
-    final appLogoImage = pw.MemoryImage(
-        (await rootBundle.load('assets/images/olajfoltiras.png')).buffer
+    // === AZ ÚJ FEJLÉC KÉP BETÖLTÉSE ===
+    final headerImage = pw.MemoryImage(
+        (await rootBundle.load('assets/images/pdf_fejlec.png')).buffer
             .asUint8List());
+
     final vehicleBrandLogo = await _getVehicleBrandLogo(vehicle.make);
 
     const accentColor = PdfColor.fromInt(0xFFF57C00);
-    const headerColor = PdfColors.black;
 
     pdf.addPage(
       pw.MultiPage(
         theme: pw.ThemeData.withFont(base: ttf, bold: boldTtf),
         pageFormat: PdfPageFormat.a4,
-        header: (pw.Context context) =>
-            _buildPdfHeader(appLogoImage, headerColor),
+        // === ITT HASZNÁLJUK AZ ÚJ FEJLÉCFÜGGVÉNYT ===
+        header: (pw.Context context) => _buildPdfHeader(headerImage),
         footer: (pw.Context context) => _buildPdfFooter(),
         build: (pw.Context context) {
           return [
@@ -72,37 +75,23 @@ class PdfSzolgaltatas {
     return pdf.save();
   }
 
-  // --- JAVÍTVA: Mentés logikája modern Android verziókhoz ---
+  // --- Mentés és megosztás (változatlan) ---
   Future<bool> _saveToDevice(Uint8List bytes, String fileName) async {
-    // A modern Android verziókon (10+) nincs szükség külön engedélyre a 'Downloads' mappába való íráshoz.
-    // A régebbi verziókhoz viszont kellhet, ezért egy verzió-ellenőrzést végzünk.
     if (Platform.isAndroid) {
-      // Csak Android 9 (API 28) és régebbi verziókon kérünk engedélyt.
-      // Az újabbaknál a rendszer automatikusan engedélyezi a mentést a Letöltésekbe.
       final deviceInfo = await DeviceInfoPlugin().androidInfo;
       if (deviceInfo.version.sdkInt <= 28) {
         var status = await Permission.storage.request();
-        if (!status.isGranted) {
-          print("Nincs engedély a tárhely írására régebbi Android verzión.");
-          return false;
-        }
+        if (!status.isGranted) return false;
       }
     }
-    // iOS-en a Downloads mappa elérése automatikusan engedélyezett
-
     try {
       final directory = await getDownloadsDirectory();
-      if (directory == null) {
-        print("Letöltések mappa nem található.");
-        return false;
-      }
+      if (directory == null) return false;
       final filePath = '${directory.path}/$fileName';
       final file = File(filePath);
       await file.writeAsBytes(bytes);
-      print('Fájl sikeresen mentve ide: $filePath');
       return true;
     } catch (e) {
-      print('Hiba a fájl mentésekor: $e');
       return false;
     }
   }
@@ -113,27 +102,25 @@ class PdfSzolgaltatas {
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/$fileName');
       await tempFile.writeAsBytes(bytes);
-
       final box = context.findRenderObject() as RenderBox?;
-
       await Share.shareXFiles(
         [XFile(tempFile.path)],
-        text: 'Szervizlap a(z) járműről.',
+        text: 'Szervizlap a járműről.',
         sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
       );
       return true;
     } catch (e) {
-      print('Hiba a fájl megosztásakor: $e');
       return false;
     }
   }
 
+  // --- Logó letöltés (változatlan) ---
   Future<pw.MemoryImage?> _getVehicleBrandLogo(String brand) async {
     try {
       final domain = brand.toLowerCase().replaceAll(' ', '') + '.com';
       final url = Uri.parse('https://logo.clearbit.com/$domain');
-      final response =
-      await http.get(url, headers: {'User-Agent': 'car_maintenance_app/1.0'});
+      final response = await http.get(
+          url, headers: {'User-Agent': 'car_maintenance_app/1.0'});
       if (response.statusCode == 200) {
         return pw.MemoryImage(response.bodyBytes);
       }
@@ -143,16 +130,19 @@ class PdfSzolgaltatas {
     return null;
   }
 
-  pw.Widget _buildPdfHeader(pw.MemoryImage logo, PdfColor headerColor) {
+  // ==========================================================
+  // === EZ AZ ÚJ, LEBUTÍTOTT FEJLÉC FÜGGVÉNY ===
+  // ==========================================================
+  pw.Widget _buildPdfHeader(pw.MemoryImage headerImage) {
     return pw.Container(
-      height: 70,
-      color: headerColor,
-      child: pw.Center(
-        child: pw.Image(logo, fit: pw.BoxFit.contain),
-      ),
+      height: 80, // A magasságot megtartjuk, hogy az arányok jók legyenek
+      margin: const pw.EdgeInsets.only(bottom: 20),
+      child: pw.Image(headerImage,
+          fit: pw.BoxFit.fill), // Kitölti a rendelkezésre álló helyet
     );
   }
 
+  // --- A kód többi része változatlan marad ---
   pw.Widget _buildVehicleInfoSection(Jarmu vehicle, pw.MemoryImage? brandLogo,
       PdfColor accentColor) {
     return pw.Container(
@@ -169,19 +159,13 @@ class PdfSzolgaltatas {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(
-                  '${vehicle.make} ${vehicle.model}',
-                  style:
-                  pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 22),
-                ),
+                pw.Text('${vehicle.make} ${vehicle.model}', style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold, fontSize: 22)),
                 pw.SizedBox(height: 5),
-                pw.Text(
-                  vehicle.licensePlate,
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 18,
-                      color: accentColor),
-                ),
+                pw.Text(vehicle.licensePlate, style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 18,
+                    color: accentColor)),
                 pw.SizedBox(height: 10),
                 pw.Table(
                   columnWidths: {
@@ -200,10 +184,8 @@ class PdfSzolgaltatas {
           if (brandLogo != null)
             pw.Expanded(
               flex: 2,
-              child: pw.Container(
-                height: 80,
-                child: pw.Image(brandLogo, fit: pw.BoxFit.contain),
-              ),
+              child: pw.SizedBox(height: 80,
+                  child: pw.Image(brandLogo, fit: pw.BoxFit.contain)),
             ),
         ],
       ),
@@ -212,15 +194,10 @@ class PdfSzolgaltatas {
 
   pw.TableRow _buildInfoRow(String label, String value) {
     return pw.TableRow(children: [
-      pw.Padding(
-        padding: const pw.EdgeInsets.all(2),
-        child: pw.Text(
-            label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-      ),
-      pw.Padding(
-        padding: const pw.EdgeInsets.all(2),
-        child: pw.Text(value),
-      ),
+      pw.Padding(padding: const pw.EdgeInsets.all(2),
+          child: pw.Text(
+              label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+      pw.Padding(padding: const pw.EdgeInsets.all(2), child: pw.Text(value)),
     ]);
   }
 
@@ -228,13 +205,9 @@ class PdfSzolgaltatas {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(title,
-            style: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                fontSize: 16,
-                color: accentColor)),
-        pw.Container(
-            height: 2,
+        pw.Text(title, style: pw.TextStyle(
+            fontWeight: pw.FontWeight.bold, fontSize: 16, color: accentColor)),
+        pw.Container(height: 2,
             color: PdfColors.grey300,
             margin: const pw.EdgeInsets.only(top: 3, bottom: 10)),
       ],
@@ -268,10 +241,8 @@ class PdfSzolgaltatas {
       cellStyle: const pw.TextStyle(fontSize: 10),
       cellPadding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       cellAlignments: {
-        0: pw.Alignment.centerLeft,
-        1: pw.Alignment.centerRight,
-        2: pw.Alignment.centerLeft,
-        3: pw.Alignment.centerRight,
+        0: pw.Alignment.centerLeft, 1: pw.Alignment.centerRight,
+        2: pw.Alignment.centerLeft, 3: pw.Alignment.centerRight,
       },
     );
   }

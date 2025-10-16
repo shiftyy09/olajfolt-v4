@@ -4,9 +4,9 @@ import 'package:car_maintenance_app/kepernyok/jarmuvek/jarmupark_kepernyo.dart';
 import 'package:car_maintenance_app/kepernyok/karbantartas/karbantartas_emlekezteto.dart';
 import 'package:car_maintenance_app/kepernyok/jarmuvek/szerviznaplo_kepernyo.dart';
 import 'package:car_maintenance_app/modellek/jarmu.dart';
-import 'package:car_maintenance_app/widgetek/kozos_menu_kartya.dart';
 import 'package:flutter/material.dart';
 import '../../alap/adatbazis/adatbazis_kezelo.dart';
+import 'package:car_maintenance_app/widgetek/kozos_widgetek.dart';
 
 class FooldalKepernyo extends StatefulWidget {
   const FooldalKepernyo({super.key});
